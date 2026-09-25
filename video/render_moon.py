@@ -6,22 +6,29 @@ full moon framed by a cell-membrane bilayer and a faint molecular network.
 No text is rendered; the final frame leaves negative space below the moon
 for typography.
 
-Usage: python3 render_moon.py [out.mp4] [--preview t1,t2,...]
+The default render is 13 s: the 10 s motion piece plus an end card
+("Happy Mid-Autumn Festival" / tagline / company name) that fades in
+below the moon. Pass --no-text for the clean 10 s version.
+
+Usage: python3 render_moon.py [out.mp4] [--no-text] [--preview t1,t2,...]
 """
 import math
+import os
 import subprocess
 import sys
 from multiprocessing import Pool
 
 import imageio_ffmpeg
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from scipy.ndimage import gaussian_filter
 from scipy.spatial import cKDTree
 
 W, H = 1920, 1080
 FPS = 30
-DUR = 10.0
+MOTION = 10.0  # length of the motion piece; timings below are keyed to it
+WITH_TEXT = '--no-text' not in sys.argv
+DUR = 13.0 if WITH_TEXT else MOTION
 NF = int(FPS * DUR)
 F = np.array([960.0, 450.0])  # moon centre (world == screen at zoom 1)
 R = 190.0                     # moon radius in world px
@@ -75,7 +82,7 @@ def upsample(arr3, size):
 
 # ---------------------------------------------------------------- camera
 def camera(t):
-    u = t / DUR
+    u = t / MOTION
     z = 1.0 + 0.075 * (0.45 * u + 0.55 * smoother(u))
     pan = (1 - smoother(t / 8.5)) * np.array([-22.0, 12.0])
     return z, pan
@@ -373,6 +380,78 @@ def draw_lnp(buf, x, y, rad, soft, cargo, rot, col, a):
     buf[y0:y1, x0:x1] += sub[..., None] * col * a
 
 
+# ---------------------------------------------------------------- end card typography
+FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts')
+TS = 2  # supersampling for type
+
+
+def _font(name, size, var):
+    f = ImageFont.truetype(os.path.join(FONT_DIR, name), size * TS)
+    f.set_variation_by_name(var)
+    return f
+
+
+def _text_mask(text, fnt, y, tracking=0.0, glyphs=None):
+    """Full-frame coverage mask with the line centred horizontally on baseline y."""
+    im = Image.new('L', (W * TS, H * TS))
+    d = ImageDraw.Draw(im)
+    if tracking:
+        adv = [fnt.getlength(ch) + tracking * fnt.size for ch in text]
+        x = (W * TS - (sum(adv) - tracking * fnt.size)) / 2
+        for ch, a in zip(text, adv):
+            d.text((x, y * TS), ch, font=fnt, fill=255, anchor='ls')
+            x += a
+    else:
+        d.text((W * TS / 2, y * TS), text, font=fnt, fill=255, anchor='ms')
+    return np.asarray(im.resize((W, H), Image.LANCZOS), np.float32) / 255
+
+
+def _rule_mask(y, half_w):
+    im = Image.new('L', (W * TS, H * TS))
+    ImageDraw.Draw(im).line([((W / 2 - half_w) * TS, y * TS), ((W / 2 + half_w) * TS, y * TS)],
+                            fill=255, width=TS)
+    return np.asarray(im.resize((W, H), Image.LANCZOS), np.float32) / 255
+
+
+def _line(mask, color, opacity, t0, dur=1.5, rise=12.0, glow=0.0):
+    ys, xs = np.nonzero(mask > 0.002)
+    y0, y1 = max(ys.min() - 24, 0), min(ys.max() + 24, H)
+    x0, x1 = max(xs.min() - 24, 0), min(xs.max() + 24, W)
+    return dict(img=Image.fromarray(np.ascontiguousarray(mask[y0:y1, x0:x1]), 'F'),
+                box=(y0, y1, x0, x1), color=color, opacity=opacity, t0=t0, dur=dur,
+                rise=rise, glow=glow)
+
+
+if WITH_TEXT:
+    TEXT_LINES = [
+        _line(_text_mask('Happy Mid-Autumn Festival', _font('Cormorant.ttf', 66, 'Light'), 842),
+              MOON, 0.96, 8.8, glow=0.18),
+        _line(_text_mask('Celebrating connection, collaboration, and shared progress.',
+                         _font('CormorantItalic.ttf', 31, 'Light Italic'), 892),
+              IVORY * 0.92 + TEAL * 0.08, 0.80, 9.4),
+        _line(_rule_mask(928, 34), GOLD, 0.70, 9.9, rise=0.0),
+        _line(_text_mask('COASTAR THERAPEUTICS', _font('Montserrat.ttf', 17, 'Regular'), 966, tracking=0.34),
+              GOLD * 1.08, 0.95, 10.1),
+    ]
+
+
+def draw_text(img, t):
+    for ln in TEXT_LINES:
+        e = smoother((t - ln['t0']) / ln['dur'])
+        if e <= 0:
+            continue
+        y0, y1, x0, x1 = ln['box']
+        dy = (1 - e) * ln['rise']
+        m = np.asarray(ln['img'].transform(ln['img'].size, Image.AFFINE, (1, 0, 0, 0, 1, -dy),
+                                           resample=Image.BICUBIC))
+        a = np.clip(m, 0, 1) * (e * ln['opacity'])
+        sub = img[y0:y1, x0:x1]
+        if ln['glow']:
+            sub += ln['color'] * (gaussian_filter(a, 7) * ln['glow'])[..., None]
+        img[y0:y1, x0:x1] = sub * (1 - a[..., None]) + ln['color'] * a[..., None]
+    return img
+
+
 # ---------------------------------------------------------------- frame
 def render(fi):
     t = fi / FPS
@@ -388,7 +467,7 @@ def render(fi):
     # --- moon (revealed from the rim inwards)
     p = 1.35 * smoothstep(5.0, 7.5, t)
     if p > 0:
-        m = affine(MOON_IMG, MOON_S, (247, 247), C, z, 0.02 * t / DUR)
+        m = affine(MOON_IMG, MOON_S, (247, 247), C, z, 0.02 * t / MOTION)
         reveal = np.clip((p - (1 - rn)) / 0.35, 0, 1)
         img = img * (1 - (m[..., 3] * reveal)[..., None]) + m[..., :3] * reveal[..., None]
         front = np.exp(-((p - (1 - rn) - 0.08) / 0.07) ** 2) * (rn < 1) * (1 - smoothstep(7.0, 7.8, t))
@@ -405,14 +484,14 @@ def render(fi):
     # --- membrane bilayer (sweeps in clockwise from the top)
     mk = smoothstep(6.3, 8.3, t)
     if mk > 0:
-        mem = affine(MEM_IMG, LS, MEM_C, C, z, -0.03 * t / DUR)
+        mem = affine(MEM_IMG, LS, MEM_C, C, z, -0.03 * t / MOTION)
         ang = (np.arctan2(XX - C[0], -(YY - C[1])) % (2 * math.pi))
         sweep = 2 * math.pi * 1.15 * smoother((t - 6.3) / 2.2)
         img += mem * (np.clip((sweep - ang) / 0.9, 0, 1) * mk)[..., None]
 
     # --- molecular network (grows outward from the moon)
     nk = smoothstep(6.8, 8.9, t)
-    theta_net = 0.035 * t / DUR
+    theta_net = 0.035 * t / MOTION
     if nk > 0:
         net = affine(NET_IMG, LS, NET_C, C, z, theta_net)
         rv = R * (1.2 + 2.4 * smoother((t - 6.8) / 2.4))
@@ -475,13 +554,15 @@ def render(fi):
     over = np.clip(img - k, 0, None)
     img = np.where(img > k, k + (1 - k) * (1 - np.exp(-over / (1 - k))), img)
     img *= VIGN[..., None]
+    if WITH_TEXT:
+        img = draw_text(img, t)
     grain = np.random.default_rng(fi).normal(0, 0.011, (H, W, 1)).astype(np.float32)
     img = np.clip(img + grain, 0, 1)
     return (img * 255 + 0.5).astype(np.uint8)
 
 
 def main():
-    args = sys.argv[1:]
+    args = [a for a in sys.argv[1:] if a != '--no-text']
     if args and args[0] == '--preview':
         for t in [float(s) for s in args[1].split(',')]:
             Image.fromarray(render(int(round(t * FPS)))).save(f'preview_{t:04.1f}.png')
@@ -489,7 +570,7 @@ def main():
     out = args[0] if args else 'coastar_mid_autumn_2026.mp4'
     cmd = [imageio_ffmpeg.get_ffmpeg_exe(), '-y', '-loglevel', 'error',
            '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}', '-r', str(FPS), '-i', '-',
-           '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-pix_fmt', 'yuv420p',
+           '-vf', 'hqdn3d=1.2:1.2:5:5', '-c:v', 'libx264', '-preset', 'slow', '-crf', '19', '-pix_fmt', 'yuv420p',
            '-movflags', '+faststart', out]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     with Pool(4) as pool:

@@ -313,7 +313,10 @@ Negative prompt: text, letters, printed ink patterns, red, bright gold, mooncake
 **成品檔案**
 - `video/coastar_mid_autumn_2026.mp4`：1920 × 1080、16:9、30 fps、10.0 秒、H.264，無任何文字
 - `video/coastar_mid_autumn_2026_final_frame.png`：最後一格靜態圖，可直接當作排字底圖、Email banner 或 LinkedIn 封面
-- `video/render_moon.py`：程式化渲染腳本（Python + NumPy + ffmpeg），調整參數後可重新輸出（`python3 render_moon.py out.mp4`）
+- `video/coastar_mid_autumn_2026_with_text.mp4`：**含結尾字卡版**（13 秒 = 10 秒動態 + 3 秒字卡停留），1920 × 1080、30 fps
+- `video/coastar_mid_autumn_2026_with_text_final_frame.png`：含字卡的最後一格靜態圖
+- `video/fonts/`：字卡使用的 Google Fonts 開源字體（SIL Open Font License，可商用）：Cormorant Garamond（標題與副標）、Montserrat（公司名稱）
+- `video/render_moon.py`：程式化渲染腳本（Python + NumPy + ffmpeg），調整參數後可重新輸出（含字卡：`python3 render_moon.py out.mp4`；無字版：加上 `--no-text`）
 
 **分鏡時間軸**
 | 時間 | 畫面 |
@@ -326,6 +329,16 @@ Negative prompt: text, letters, printed ink patterns, red, bright gold, mooncake
 | 9–10 秒 | 畫面靜定：滿月置中偏上，下方留有大面積負空間放公司標題與祝福語 |
 
 鏡頭：全程極緩慢推近（約 7.5%），並帶一點緩慢橫移，最後穩定下來，沒有任何快速或跳動的動作。
+
+**結尾字卡（含字卡版）**
+| 時間 | 文字 | 字體 / 顏色 |
+|---|---|---|
+| 8.8 秒起淡入 | Happy Mid-Autumn Festival | Cormorant Garamond Light 66 px，月光白，帶極淡光暈 |
+| 9.4 秒起淡入 | *Celebrating connection, collaboration, and shared progress.* | Cormorant Garamond Light Italic 31 px，象牙白 |
+| 9.9 秒起淡入 | 一條香檳金細線 | 68 px 寬 |
+| 10.1 秒起淡入 | COASTAR THERAPEUTICS | Montserrat Regular 17 px，字距 0.34 em，香檳金 |
+
+每一行都以約 1.5 秒的時間淡入，並輕微上移 12 px。所有文字在 11.6 秒前全部就位，並停留到 13 秒。
 
 **後製建議（在剪輯軟體中加入）**
 - 字卡建議出現在 8.5 秒之後，放在月亮下方：`Wishing you a bright and joyful Mid-Autumn Festival` / `Coastar Therapeutics`（可加中文：`中秋快樂 · 月圓人圓`）
