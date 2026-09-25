@@ -305,3 +305,59 @@ Negative prompt: text, letters, printed ink patterns, red, bright gold, mooncake
 4. **合規**：賀卡中不提任何產品、臨床數據或前瞻性陳述，避免被視為宣傳材料。寄給投資人前請給 IR / Legal 過目。
 5. **中英雙語排版**：中文用思源宋體細字重，英文用對應的襯線字體，兩者大小以視覺等高為準，不是數值等高。
 6. **時程**：2026 年中秋是 **9 月 25 日**。如果要趕在當天發出，Email banner（概念一）和 LinkedIn 單圖（概念四）最快；影片與實體卡建議作為明年（2027 年 9 月 15 日）的提前規劃。
+
+---
+
+# 附錄：10 秒電影感賀歲短片（依概念三延伸製作）
+
+**成品檔案**
+- `video/coastar_mid_autumn_2026.mp4`：1920 × 1080、16:9、30 fps、10.0 秒、H.264，無任何文字
+- `video/coastar_mid_autumn_2026_final_frame.png`：最後一格靜態圖，可直接當作排字底圖、Email banner 或 LinkedIn 封面
+- `video/render_moon.py`：程式化渲染腳本（Python + NumPy + ffmpeg），調整參數後可重新輸出（`python3 render_moon.py out.mp4`）
+
+**分鏡時間軸**
+| 時間 | 畫面 |
+|---|---|
+| 0–1.5 秒 | 從深夜藍中淡入，半透明的脂質奈米顆粒（可以看到雙層膜邊緣與內部貨物）和細小的生物微粒緩慢漂浮，前景有少量景深散景 |
+| 1.5–5 秒 | 微粒沿著螺旋弧線向中心匯聚，顏色從青綠（實驗室螢光）逐漸轉成象牙白（溫度、團圓），先組成一圈發光的圓環 |
+| 5–7.5 秒 | 光環由外向內「填滿」，一道柔和的光波往圓心推進，無縫轉化為一輪明月；微粒融入月面後淡出 |
+| 6.3–8.3 秒 | 月亮外圍由頂端順時針浮現細胞膜磷脂雙層與一圈淡淡的細胞紋理 |
+| 6.8–9 秒 | 分子網絡從月亮向外生長，線條上有光點緩緩流動，象徵連結與合作 |
+| 9–10 秒 | 畫面靜定：滿月置中偏上，下方留有大面積負空間放公司標題與祝福語 |
+
+鏡頭：全程極緩慢推近（約 7.5%），並帶一點緩慢橫移，最後穩定下來，沒有任何快速或跳動的動作。
+
+**後製建議（在剪輯軟體中加入）**
+- 字卡建議出現在 8.5 秒之後，放在月亮下方：`Wishing you a bright and joyful Mid-Autumn Festival` / `Coastar Therapeutics`（可加中文：`中秋快樂 · 月圓人圓`）
+- 配樂：極簡鋼琴或弦樂長音，也可以加一點古箏泛音作為東方元素（點到為止），音量在 9 秒後漸弱
+- 需要更長的版本（例如 15 秒）時，可以把最後一格靜止延長 3 到 5 秒，並讓字卡淡入
+
+## AI 影片生成提示詞（Veo / Sora / Runway / Kling 用）
+
+如果想用生成式影片工具另外製作一版寫實感更強的影片，可以直接使用以下提示詞：
+
+```
+A sophisticated 10-second cinematic corporate greeting for a biotechnology company, 16:9, photoreal scientific visualization.
+
+Open in a dark midnight-blue microscopic environment with soft volumetric depth. Elegant translucent lipid nanoparticles — each with a delicate glowing bilayer shell and faint inner cargo — drift slowly alongside soft, tiny biological particles; a few out-of-focus particles pass in the foreground as gentle bokeh.
+
+Gradually the particles begin to glide toward one another along graceful spiral paths, their glow shifting from restrained cool teal to warm moonlight white. They assemble into a glowing circular ring, which fills inward with a soft wave of light and transforms seamlessly into a luminous, realistic full moon with gentle maria and a subtle champagne-gold halo.
+
+Around the moon, a fine cell-membrane bilayer ring and a faint cellular texture softly emerge, followed by a delicate molecular network of thin champagne-gold lines and small teal nodes growing outward, with tiny points of light travelling along the connections.
+
+End on a calm, clean composition: the full moon centered slightly above frame center, with ample empty negative space below for corporate typography.
+
+Camera: a single continuous, extremely smooth and slow push-in; no cuts, no shake.
+Mood: premium biotechnology brand, sophisticated, calm, optimistic, scientific, international.
+Palette: midnight navy, moonlight white, subtle champagne gold, restrained teal.
+```
+
+**Negative prompt / 避免項目：**
+```
+text, letters, logos, watermarks, cartoon, anime, rabbits, mooncakes, lanterns, palaces, pagodas, temples, dragons, excessive Chinese motifs, red and gold color scheme, fireworks, cheesy corporate motion graphics, lens-flare overload, fast camera moves, cuts, DNA helix clichés, syringes, pills, neon colors
+```
+
+**各平台小技巧**
+- **Veo / Sora**：直接貼上完整提示詞即可；如果能選時長，選 8 到 10 秒，解析度選 1080p
+- **Runway Gen-4 / Kling**：建議把 `video/coastar_mid_autumn_2026_final_frame.png` 當作「結尾影格（end frame）」參考圖，這樣最後構圖會固定在我們設計好的版面
+- 生成的影片通常都會出現少量文字或浮水印瑕疵，挑片時請逐格檢查最後 2 秒
